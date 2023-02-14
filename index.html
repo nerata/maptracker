@@ -34,34 +34,87 @@ var map = new mapboxgl.Map({
     zoom: 8
 });
 
-var marker = new mapboxgl.Marker()
-    .setLngLat([-155.9962,19.6419])
-    .addTo(map);
+// Add bus markers to map
+async function addMarkers(){
+	// get bus data
+	var locations = await getBusLocations();
 
-const busStops = [
-      [-155.9962,19.6419],
-      [-156.0063,19.8107],
-      [-155.6628,20.0173],
-      [-155.5928,20.1140],
-      [-155.1522,19.8539],
-      [-155.1094,19.7193],
-      [-155.2885,19.4194],
-      [-155.6833,18.9136],
-      [-155.9259,19.4782],
-      [-155.4694,19.8230],
-    ];
+	// loop through data, add bus markers
+	locations.forEach(function(bus){
+		var marker = getMarker(bus.id);		
+		if (marker){
+			moveMarker(marker,bus);
+		}
+		else{
+			addMarker(bus);			
+		}
+	});
 
-var counter = 0;
-function move(){
-  setTimeout(() =>{
-    if(counter >=busStops.length) return;
-    marker.setLngLat(busStops[counter]);
-    counter++;
-    move();
-  },1000);
-  }
+	// timer
+	console.log(new Date());
+	setTimeout(addMarkers,15000);
+}
+
+async function run(){
+    // get bus data    
+	const locations = await getBusLocations();
+	console.log(new Date());
+	console.log(locations);
+
+	// timer
+	setTimeout(run, 15000);
+}
+
+// Request bus data from MBTA
+async function getBusLocations(){
+	var url = 'https://api-v3.mbta.com/vehicles?api_key=ca34f7b7ac8a445287cab52fb451030a&filter[route]=1&include=trip';	
+	var response = await fetch(url);
+	var json     = await response.json();
+	return json.data;
+}
+
+function addMarker(bus){
+	var icon = getIcon(bus);
+	var marker = new google.maps.Marker({
+	    position: {
+	    	lat: bus.attributes.latitude, 
+	    	lng: bus.attributes.longitude
+	    },
+	    map: map,
+	    icon: icon,
+	    id: bus.id
+	});
+	markers.push(marker);
+}
+
+function getIcon(bus){
+	// select icon based on bus direction
+	if (bus.attributes.direction_id === 0) {
+		return 'red.png';
+	}
+	return 'blue.png';	
+}
+
+function moveMarker(marker,bus) {
+	// change icon if bus has changed direction
+	var icon = getIcon(bus);
+	marker.setIcon(icon);
+
+	// move icon to new lat/lon
+    marker.setPosition( {
+    	lat: bus.attributes.latitude, 
+    	lng: bus.attributes.longitude
+	});
+}
+
+function getMarker(id){
+	var marker = markers.find(function(item){
+		return item.id === id;
+	});
+	return marker;
+}
+
+window.onload = init;
+
 </script>
-
- 
-</body>
 </html>
